@@ -38,13 +38,48 @@
             <source src="https://stream2.nextpulse.workers.dev/dl/3778/Gyna+Physiology+Integration+part+1.mp4?hash=AgADmg" type="video/mp4">
             Your browser does not support the video tag.
         </video>
+        <div class="controls">
+            <button id="downloadBtn">Download Video</button>
+        </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const video = document.getElementById('videoPlayer');
-            
-            // Optional: Add event listeners for more control
+            const downloadBtn = document.getElementById('downloadBtn');
+
+            // Download functionality
+            downloadBtn.addEventListener('click', function() {
+                const videoUrl = video.querySelector('source').src;
+                const fileName = videoUrl.split('/').pop().split('?')[0]; // Extract filename
+                
+                // Method 1: Direct download using anchor tag
+                const link = document.createElement('a');
+                link.href = videoUrl;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Method 2: Fetch and download (works better with CORS)
+                /*
+                fetch(videoUrl)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    })
+                    .catch(error => console.error('Download failed:', error));
+                */
+            });
+
+            // Optional: Event listeners for video
             video.addEventListener('canplay', function() {
                 console.log('Video can be played');
             });
