@@ -3,24 +3,422 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MBBS Quiz</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>MX Player-like Video Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .player-container {
+            position: relative;
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        #videoPlayer {
+            width: 100%;
+            height: 100%;
+            max-height: 100vh;
+            background-color: #000;
+        }
+        
+        .controls-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            z-index: 10;
+        }
+        
+        .player-container:hover .controls-overlay {
+            opacity: 1;
+        }
+        
+        .top-controls, .bottom-controls {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+        }
+        
+        .center-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .seek-indicator {
+            position: absolute;
+            width: 100px;
+            height: 60px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 20;
+        }
+        
+        .control-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            margin: 0 5px;
+        }
+        
+        .progress-container {
+            width: 100%;
+            height: 5px;
+            background-color: #444;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: #f00;
+            width: 0%;
+        }
+        
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 14px;
+        }
+        
+        .volume-control, .brightness-control {
+            position: absolute;
+            height: 100px;
+            width: 30px;
+            background-color: rgba(0, 0, 0, 0.7);
+            right: 50px;
+            bottom: 60px;
+            border-radius: 5px;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+        }
+        
+        .volume-slider, .brightness-slider {
+            width: 80px;
+            transform: rotate(-90deg);
+            margin: 40px 0;
+        }
+        
+        .gesture-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 5;
+        }
+        
+        .fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            background-color: black;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>MBBS Quiz</h1>
-    </header>
-    <main>
-        <div class="question-container">
-            <p id="question"></p>
-            <ul id="options">
-                <!-- Options will be generated dynamically -->
-            </ul>
-            <button id="submit">Submit</button>
-            <p id="explanation"></p>
-            <p id="score"></p>
+    <div class="player-container" id="playerContainer">
+        <video id="videoPlayer">
+            <source src="https://stream2.nextpulse.workers.dev/dl/3778/Gyna+Physiology+Integration+part+1.mp4?hash=AgADmg" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        
+        <div class="seek-indicator" id="seekIndicator">+10s</div>
+        
+        <div class="controls-overlay">
+            <div class="top-controls">
+                <button class="control-btn" id="backBtn">←</button>
+                <div style="flex-grow: 1;"></div>
+                <button class="control-btn" id="fullscreenBtn">⛶</button>
+            </div>
+            
+            <div class="center-controls">
+                <button class="control-btn" id="rewindBtn">⏪</button>
+                <button class="control-btn" id="playPauseBtn">▶</button>
+                <button class="control-btn" id="forwardBtn">⏩</button>
+            </div>
+            
+            <div class="bottom-controls">
+                <span id="currentTime">0:00</span>
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <span id="duration">0:00</span>
+                <button class="control-btn" id="volumeBtn">🔊</button>
+                <button class="control-btn" id="brightnessBtn">☀️</button>
+            </div>
         </div>
-    </main>
-    <script src="script.js"></script>
+        
+        <div class="volume-control" id="volumeControl">
+            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="1">
+        </div>
+        
+        <div class="brightness-control" id="brightnessControl">
+            <input type="range" class="brightness-slider" id="brightnessSlider" min="0" max="1" step="0.01" value="1">
+        </div>
+        
+        <div class="gesture-overlay" id="gestureOverlay"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('videoPlayer');
+            const playerContainer = document.getElementById('playerContainer');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const rewindBtn = document.getElementById('rewindBtn');
+            const forwardBtn = document.getElementById('forwardBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressContainer = document.getElementById('progressContainer');
+            const currentTimeDisplay = document.getElementById('currentTime');
+            const durationDisplay = document.getElementById('duration');
+            const volumeBtn = document.getElementById('volumeBtn');
+            const volumeControl = document.getElementById('volumeControl');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const brightnessBtn = document.getElementById('brightnessBtn');
+            const brightnessControl = document.getElementById('brightnessControl');
+            const brightnessSlider = document.getElementById('brightnessSlider');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            const seekIndicator = document.getElementById('seekIndicator');
+            const gestureOverlay = document.getElementById('gestureOverlay');
+            const backBtn = document.getElementById('backBtn');
+            
+            let lastTapTime = 0;
+            let tapTimeout;
+            let isFullscreen = false;
+            
+            // Play/Pause toggle
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            video.addEventListener('click', togglePlayPause);
+            
+            function togglePlayPause() {
+                if (video.paused) {
+                    video.play();
+                    playPauseBtn.textContent = '❚❚';
+                } else {
+                    video.pause();
+                    playPauseBtn.textContent = '▶';
+                }
+            }
+            
+            // Rewind 10 seconds
+            rewindBtn.addEventListener('click', () => seek(-10));
+            
+            // Forward 10 seconds
+            forwardBtn.addEventListener('click', () => seek(10));
+            
+            function seek(seconds) {
+                video.currentTime += seconds;
+                showSeekIndicator(seconds);
+            }
+            
+            function showSeekIndicator(seconds) {
+                seekIndicator.textContent = `${seconds > 0 ? '+' : ''}${seconds}s`;
+                seekIndicator.style.opacity = 1;
+                
+                setTimeout(() => {
+                    seekIndicator.style.opacity = 0;
+                }, 500);
+            }
+            
+            // Update progress bar
+            video.addEventListener('timeupdate', updateProgress);
+            
+            function updateProgress() {
+                const percent = (video.currentTime / video.duration) * 100;
+                progressBar.style.width = `${percent}%`;
+                currentTimeDisplay.textContent = formatTime(video.currentTime);
+            }
+            
+            // Set progress on click
+            progressContainer.addEventListener('click', (e) => {
+                const rect = progressContainer.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                video.currentTime = pos * video.duration;
+            });
+            
+            // Format time (seconds to MM:SS)
+            function formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            }
+            
+            // Set video duration when metadata is loaded
+            video.addEventListener('loadedmetadata', () => {
+                durationDisplay.textContent = formatTime(video.duration);
+            });
+            
+            // Volume control
+            volumeBtn.addEventListener('click', () => {
+                brightnessControl.style.display = 'none';
+                volumeControl.style.display = volumeControl.style.display === 'flex' ? 'none' : 'flex';
+            });
+            
+            volumeSlider.addEventListener('input', () => {
+                video.volume = volumeSlider.value;
+                updateVolumeIcon();
+            });
+            
+            function updateVolumeIcon() {
+                if (video.volume === 0) {
+                    volumeBtn.textContent = '🔇';
+                } else if (video.volume < 0.5) {
+                    volumeBtn.textContent = '🔉';
+                } else {
+                    volumeBtn.textContent = '🔊';
+                }
+            }
+            
+            // Brightness control
+            brightnessBtn.addEventListener('click', () => {
+                volumeControl.style.display = 'none';
+                brightnessControl.style.display = brightnessControl.style.display === 'flex' ? 'none' : 'flex';
+            });
+            
+            brightnessSlider.addEventListener('input', () => {
+                video.style.filter = `brightness(${brightnessSlider.value})`;
+            });
+            
+            // Fullscreen toggle
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+            
+            function toggleFullscreen() {
+                if (!isFullscreen) {
+                    playerContainer.classList.add('fullscreen');
+                    if (playerContainer.requestFullscreen) {
+                        playerContainer.requestFullscreen();
+                    } else if (playerContainer.webkitRequestFullscreen) {
+                        playerContainer.webkitRequestFullscreen();
+                    } else if (playerContainer.msRequestFullscreen) {
+                        playerContainer.msRequestFullscreen();
+                    }
+                    isFullscreen = true;
+                    fullscreenBtn.textContent = '⛶';
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
+                    playerContainer.classList.remove('fullscreen');
+                    isFullscreen = false;
+                    fullscreenBtn.textContent = '⛶';
+                }
+            }
+            
+            // Double tap to seek
+            gestureOverlay.addEventListener('click', handleTap);
+            
+            function handleTap(e) {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTapTime;
+                
+                if (tapLength < 300 && tapLength > 0) {
+                    // Double tap detected
+                    clearTimeout(tapTimeout);
+                    
+                    // Determine tap position (left or right half)
+                    const rect = gestureOverlay.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const halfWidth = rect.width / 2;
+                    
+                    if (x > halfWidth) {
+                        // Right side - forward 10 seconds
+                        seek(10);
+                    } else {
+                        // Left side - rewind 10 seconds
+                        seek(-10);
+                    }
+                    
+                    lastTapTime = 0;
+                } else {
+                    // Single tap
+                    lastTapTime = currentTime;
+                    tapTimeout = setTimeout(() => {
+                        // Single tap action (toggle controls visibility)
+                        const controls = document.querySelector('.controls-overlay');
+                        controls.style.opacity = controls.style.opacity === '1' ? '0' : '1';
+                    }, 300);
+                }
+            }
+            
+            // Back button
+            backBtn.addEventListener('click', () => {
+                if (isFullscreen) {
+                    toggleFullscreen();
+                } else {
+                    window.history.back();
+                }
+            });
+            
+            // Initialize
+            updateVolumeIcon();
+            video.volume = 1;
+            volumeSlider.value = 1;
+            brightnessSlider.value = 1;
+            
+            // Hide controls after 3 seconds of inactivity
+            let controlsTimeout;
+            function resetControlsTimeout() {
+                clearTimeout(controlsTimeout);
+                controlsTimeout = setTimeout(() => {
+                    document.querySelector('.controls-overlay').style.opacity = 0;
+                    volumeControl.style.display = 'none';
+                    brightnessControl.style.display = 'none';
+                }, 3000);
+            }
+            
+            playerContainer.addEventListener('mousemove', () => {
+                document.querySelector('.controls-overlay').style.opacity = 1;
+                resetControlsTimeout();
+            });
+            
+            resetControlsTimeout();
+        });
+    </script>
 </body>
-</html>
+    </html>
