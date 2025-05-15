@@ -3,303 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MX Style Video Player</title>
+    <title>Video Streaming</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
             font-family: Arial, sans-serif;
-            background: #000;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .player-container {
-            position: relative;
-            width: 100%;
             max-width: 800px;
-            background: #000;
+            margin: 0 auto;
+            padding: 20px;
         }
-
-        #videoPlayer {
+        .video-container {
             width: 100%;
-            height: auto;
+            margin-top: 20px;
         }
-
-        .controls-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            opacity: 1;
-            transition: opacity 0.3s;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent 30%, transparent 70%, rgba(0,0,0,0.7));
-        }
-
-        .top-bar, .bottom-bar {
-            display: flex;
-            justify-content: space-between;
-            padding: 15px;
-            color: white;
-        }
-
-        .center-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .control-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 8px;
-        }
-
-        .progress-container {
+        video {
             width: 100%;
-            height: 5px;
-            background: #333;
-            position: relative;
+            background-color: #000;
+        }
+        .controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 8px 15px;
             cursor: pointer;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: #e50914;
-            width: 0%;
-            transition: width 0.1s linear;
-        }
-
-        .seek-indicator {
-            position: absolute;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 14px;
-            display: none;
-        }
-
-        .volume-container, .brightness-container {
-            position: absolute;
-            right: 20px;
-            bottom: 60px;
-            background: rgba(0,0,0,0.7);
-            padding: 10px;
-            border-radius: 5px;
-            display: none;
-        }
-
-        input[type="range"] {
-            -webkit-appearance: none;
-            width: 80px;
-            height: 4px;
-            background: #444;
-            border-radius: 2px;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 12px;
-            height: 12px;
-            background: #fff;
-            border-radius: 50%;
         }
     </style>
 </head>
 <body>
-    <div class="player-container">
-        <video id="videoPlayer" controls muted playsinline>
+    <h1>Video Streaming</h1>
+    
+    <div class="video-container">
+        <video id="videoPlayer" controls>
             <source src="https://stream2.nextpulse.workers.dev/dl/3778/Gyna+Physiology+Integration+part+1.mp4?hash=AgADmg" type="video/mp4">
+            Your browser does not support the video tag.
         </video>
-
-        <div class="controls-overlay">
-            <div class="top-bar">
-                <button class="control-btn" onclick="window.history.back()">‹</button>
-                <span>Now Playing</span>
-                <button class="control-btn" id="fullscreenBtn">⤢</button>
-            </div>
-
-            <div class="center-controls">
-                <button class="control-btn" id="rewindBtn">« 10s</button>
-                <button class="control-btn" id="playPauseBtn">▶</button>
-                <button class="control-btn" id="forwardBtn">10s »</button>
-            </div>
-
-            <div class="bottom-bar">
-                <div class="progress-container" id="progressContainer">
-                    <div class="progress-bar" id="progressBar"></div>
-                    <div class="seek-indicator" id="seekIndicator"></div>
-                </div>
-                <div class="time-display">
-                    <span id="currentTime">0:00</span> / 
-                    <span id="duration">0:00</span>
-                </div>
-                <button class="control-btn" id="volumeBtn">🔊</button>
-                <button class="control-btn" id="brightnessBtn">☀️</button>
-            </div>
-        </div>
-
-        <div class="volume-container" id="volumeControl">
-            <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="1">
-        </div>
-
-        <div class="brightness-container" id="brightnessControl">
-            <input type="range" id="brightnessSlider" min="0" max="1" step="0.1" value="1">
-        </div>
     </div>
 
     <script>
-        const video = document.getElementById('videoPlayer');
-        const playPauseBtn = document.getElementById('playPauseBtn');
-        const rewindBtn = document.getElementById('rewindBtn');
-        const forwardBtn = document.getElementById('forwardBtn');
-        const progressBar = document.getElementById('progressBar');
-        const progressContainer = document.getElementById('progressContainer');
-        const volumeBtn = document.getElementById('volumeBtn');
-        const volumeControl = document.getElementById('volumeControl');
-        const volumeSlider = document.getElementById('volumeSlider');
-        const brightnessBtn = document.getElementById('brightnessBtn');
-        const brightnessControl = document.getElementById('brightnessControl');
-        const brightnessSlider = document.getElementById('brightnessSlider');
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
-        const seekIndicator = document.getElementById('seekIndicator');
-        const currentTime = document.getElementById('currentTime');
-        const duration = document.getElementById('duration');
-
-        // Double tap handling
-        let lastTap = 0;
-        video.addEventListener('click', (e) => {
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTap;
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('videoPlayer');
             
-            if (tapLength < 300 && tapLength > 0) {
-                const rect = video.getBoundingClientRect();
-                const tapPosition = e.clientX - rect.left;
-                const seekAmount = tapPosition > rect.width / 2 ? 10 : -10;
-                
-                video.currentTime += seekAmount;
-                showSeekFeedback(seekAmount);
-                lastTap = 0;
-            } else {
-                lastTap = currentTime;
-            }
-        });
-
-        function showSeekFeedback(seconds) {
-            seekIndicator.textContent = `${seconds > 0 ? '+' : ''}${seconds}s`;
-            seekIndicator.style.display = 'block';
-            setTimeout(() => seekIndicator.style.display = 'none', 1000);
-        }
-
-        // Play/Pause controls
-        playPauseBtn.addEventListener('click', () => {
-            video[video.paused ? 'play' : 'pause']();
-        });
-
-        video.addEventListener('play', () => {
-            playPauseBtn.textContent = '❚❚';
-        });
-
-        video.addEventListener('pause', () => {
-            playPauseBtn.textContent = '▶';
-        });
-
-        // Skip controls
-        rewindBtn.addEventListener('click', () => seek(-10));
-        forwardBtn.addEventListener('click', () => seek(10));
-
-        function seek(seconds) {
-            video.currentTime += seconds;
-            showSeekFeedback(seconds);
-        }
-
-        // Progress bar
-        video.addEventListener('timeupdate', () => {
-            const progress = (video.currentTime / video.duration) * 100;
-            progressBar.style.width = `${progress}%`;
-            currentTime.textContent = formatTime(video.currentTime);
-        });
-
-        progressContainer.addEventListener('click', (e) => {
-            const rect = progressContainer.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            video.currentTime = pos * video.duration;
-        });
-
-        // Volume control
-        volumeBtn.addEventListener('click', () => {
-            brightnessControl.style.display = 'none';
-            volumeControl.style.display = volumeControl.style.display === 'block' ? 'none' : 'block';
-        });
-
-        volumeSlider.addEventListener('input', (e) => {
-            video.volume = e.target.value;
-            volumeBtn.textContent = video.volume === 0 ? '🔇' : video.volume < 0.5 ? '🔉' : '🔊';
-        });
-
-        // Brightness control
-        brightnessBtn.addEventListener('click', () => {
-            volumeControl.style.display = 'none';
-            brightnessControl.style.display = brightnessControl.style.display === 'block' ? 'none' : 'block';
-        });
-
-        brightnessSlider.addEventListener('input', (e) => {
-            video.style.filter = `brightness(${e.target.value})`;
-        });
-
-        // Fullscreen
-        fullscreenBtn.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                video.requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
-        });
-
-        // Time formatting
-        function formatTime(seconds) {
-            const minutes = Math.floor(seconds / 60);
-            seconds = Math.floor(seconds % 60);
-            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        }
-
-        // Initialize duration
-        video.addEventListener('loadedmetadata', () => {
-            duration.textContent = formatTime(video.duration);
-        });
-
-        // Keyboard controls
-        document.addEventListener('keydown', (e) => {
-            switch(e.key) {
-                case ' ':
-                    e.preventDefault();
-                    video[video.paused ? 'play' : 'pause']();
-                    break;
-                case 'ArrowLeft':
-                    seek(-5);
-                    break;
-                case 'ArrowRight':
-                    seek(5);
-                    break;
-                case 'f':
-                    fullscreenBtn.click();
-                    break;
-            }
+            // Optional: Add event listeners for more control
+            video.addEventListener('canplay', function() {
+                console.log('Video can be played');
+            });
+            
+            video.addEventListener('error', function() {
+                console.error('Error loading video');
+            });
         });
     </script>
 </body>
